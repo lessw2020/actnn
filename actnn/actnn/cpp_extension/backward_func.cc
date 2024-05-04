@@ -9,7 +9,7 @@
 namespace at {
 namespace native {
 
-// Copied from 
+// Copied from
 // https://github.com/pytorch/pytorch/blob/8deb4fe809ca956276e8d6edaa184de7118be58f/aten/src/ATen/native/layer_norm.h#L11
 std::tuple<Tensor, Tensor, Tensor, int64_t, int64_t> prepare_layer_norm_inputs(
     const Tensor& input,
@@ -79,8 +79,8 @@ std::tuple<Tensor, Tensor, Tensor, int64_t, int64_t> prepare_layer_norm_inputs(
 
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("cudnn_convolution_backward",           &at::cudnn_convolution_backward);
-  m.def("cudnn_convolution_transpose_backward", &at::cudnn_convolution_transpose_backward);
+  //m.def("cudnn_convolution_backward",           &at::cudnn_convolution_backward);
+  //m.def("cudnn_convolution_transpose_backward", &at::cudnn_convolution_transpose_backward);
   m.def("prepare_layer_norm_inputs",  &at::native::prepare_layer_norm_inputs);
   m.def("layer_norm_cuda",            &at::native::layer_norm_cuda);
   m.def("layer_norm_backward_cuda",   &at::native::layer_norm_backward_cuda);

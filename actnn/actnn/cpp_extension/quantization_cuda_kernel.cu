@@ -3,7 +3,7 @@
  */
 
 #include <torch/extension.h>
-#include <ATen/CUDAGeneratorImpl.h>
+#include <ATen/cuda/CUDAGeneratorImpl.h>
 #include <THC/THCAtomics.cuh>
 
 #include <cuda.h>
@@ -120,6 +120,17 @@ std::pair<Tensor, Tensor> pack_mixed_precision_cuda(Tensor data,
     rng_engine_inputs = gen->philox_engine_inputs(threads);
   }
   TORCH_CHECK(stochastic);
+  /*
+  // Random number generator
+auto gen = at::check_generator<at::CUDAGeneratorImpl>(at::cuda::detail::getDefaultCUDAGenerator());
+std::pair<uint64_t, uint64_t> rng_engine_inputs;
+{
+    // See Note [Acquire lock when using random generators]
+    std::lock_guard<std::mutex> lock(gen->mutex());
+    rng_engine_inputs = at::cuda::philox::unpack(gen->philox_engine_inputs(threads));
+}
+TORCH_CHECK(stochastic);
+*/
 
   // Call pack kernels
   int64_t logical_block_y_dim = N;
@@ -302,7 +313,7 @@ std::pair<Tensor, Tensor> pack_single_precision_cuda(Tensor data,
   for (int64_t block_idx_y_base = 0; block_idx_y_base < logical_block_y_dim; block_idx_y_base += BLOCK_Y_DIM_MAX) {
     dim3 block_dim(num_groups, std::min(logical_block_y_dim - block_idx_y_base, BLOCK_Y_DIM_MAX), 1);
     dim3 thread_dim(group_size, 1, 1);
-  
+
     if (N % work_per_thread == 0) {
       AT_DISPATCH_FLOATING_TYPES_AND_HALF(data.scalar_type(), "pack_single_precision", ([&] {
         pack_single_precision_kernel<scalar_t, false><<<block_dim, thread_dim>>>(
@@ -379,7 +390,7 @@ Tensor unpack_single_precision_cuda(Tensor data,
   for (int64_t block_idx_y_base = 0; block_idx_y_base < logical_block_y_dim; block_idx_y_base += BLOCK_Y_DIM_MAX) {
     dim3 block_dim(num_groups, std::min(logical_block_y_dim - block_idx_y_base, BLOCK_Y_DIM_MAX), 1);
     dim3 thread_dim(group_size, 1, 1);
- 
+
     if (N % work_per_thread == 0) {
       AT_DISPATCH_FLOATING_TYPES_AND_HALF(scale.scalar_type(), "unpack_single_precision", ([&] {
         unpack_single_precision_kernel<scalar_t, false><<<block_dim, thread_dim>>>(
@@ -725,7 +736,7 @@ __global__ void act_quantized_max_pool2d_backward_kernel(const scalar_t* __restr
 }
 
 Tensor act_quantized_max_pool2d_backward_cuda(Tensor grad_output, Tensor max_indices,
-        IntArrayRef input_shape, 
+        IntArrayRef input_shape,
         IntArrayRef kernel_size, IntArrayRef stride, IntArrayRef padding, IntArrayRef dilation,
         bool ceil_mode, bool return_indices) {
   auto options = torch::TensorOptions().dtype(grad_output.dtype()).device(grad_output.device());
