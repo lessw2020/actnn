@@ -7,7 +7,7 @@ static methods.
 
 import torch
 import re
-from torch._six import container_abcs, string_classes, int_classes
+from collections import abc as container_abcs
 
 np_str_obj_array_pattern = re.compile(r'[SaUO]')
 
@@ -28,7 +28,7 @@ def default_convert(data):
         return {key: default_convert(data[key]) for key in data}
     elif isinstance(data, tuple) and hasattr(data, '_fields'):  # namedtuple
         return elem_type(*(default_convert(d) for d in data))
-    elif isinstance(data, container_abcs.Sequence) and not isinstance(data, string_classes):
+    elif isinstance(data, container_abcs.Sequence) and not isinstance(data, str):
         return [default_convert(d) for d in data]
     else:
         return data
@@ -66,9 +66,9 @@ def default_collate(batch):
             return torch.as_tensor(batch)
     elif isinstance(elem, float):
         return torch.tensor(batch, dtype=torch.float64)
-    elif isinstance(elem, int_classes):
+    elif isinstance(elem, int):
         return torch.tensor(batch)
-    elif isinstance(elem, string_classes):
+    elif isinstance(elem, str):
         return batch
     elif isinstance(elem, container_abcs.Mapping):
         return {key: default_collate([d[key] for d in batch]) for key in elem}
