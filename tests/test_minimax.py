@@ -52,10 +52,9 @@ def test_minimax_speed():
         cost_us = test_implementation(ext_minimax)
 
         print("PyTorch.  Cost: %.3f ms" % (cost_ref * 1e3))
-        print("Ous.      Cost: %.3f ms" % (cost_us * 1e3))
+        print("Ours.      Cost: %.3f ms" % (cost_us * 1e3))
 
 
 if __name__ == "__main__":
     test_minimax_correctness()
     test_minimax_speed()
-
