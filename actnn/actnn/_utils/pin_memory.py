@@ -6,7 +6,8 @@ static methods.
 """
 
 import torch
-from torch._six import queue, container_abcs, string_classes
+import queue
+from collections import abc as container_abcs
 from . import MP_STATUS_CHECK_INTERVAL
 from torch._utils import ExceptionWrapper
 
@@ -45,7 +46,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
 def pin_memory(data):
     if isinstance(data, torch.Tensor):
         return data.pin_memory()
-    elif isinstance(data, string_classes):
+    elif isinstance(data, str):
         return data
     elif isinstance(data, container_abcs.Mapping):
         return {k: pin_memory(sample) for k, sample in data.items()}
