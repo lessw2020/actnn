@@ -3,7 +3,7 @@ from torch.utils import cpp_extension
 
 setup(
     name='actnn',
-    version='1.0.5031',  # todo - update version
+    version='1.0.507',  # todo - update version
     ext_modules=[
         cpp_extension.CUDAExtension(
             'actnn.cpp_extension.calc_precision',
