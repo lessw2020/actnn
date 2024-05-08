@@ -7,6 +7,8 @@ from timeit_v2 import py_benchmark
 
 import actnn.cpp_extension.quantization as ext_quantization
 
+from test_utils import quant_allclose
+
 
 def quantize_and_pack(data, bits, mn, mx):
 
@@ -56,16 +58,40 @@ def quantize_activation(input, scheme=None):
     #    input_groups, q_bits, q_min, mx = scheme.compute_quantization_bits(input)
     #else:
     input_groups, q_bits, q_min, mx = no_scheme_compute_quantization_bits(input)
-    print(f"{input_groups=}, {q_bits=}, {mx=}, {q_min=}")
+    #print(f"{input_groups=}, {q_bits=}, {mx=}, {q_min=}")
 
     q_input, q_scale = quantize_and_pack(input_groups, q_bits, q_min, mx)
 
 
     # TODO convert q_bits to int8
     if input.dtype == torch.float32:
-        return q_input, q_bits, q_scale.to(torch.bfloat16), q_min.to(torch.bfloat16)
+        return q_input, q_bits, q_scale, q_min # .to(torch.bfloat16), q_min.to(torch.bfloat16)
     else:
         return q_input, q_bits, q_scale, q_min
+
+
+def dequantize_and_unpack(data, shape, bits, scale, mn):
+
+    #if config.swap:
+    #    data = data.cuda(non_blocking=True)
+
+    # Pad to group_size
+    N = shape[0]
+    num_features = int(np.prod(shape[1:]))
+    group_size = 256 # config.group_size
+    num_features = (num_features + (group_size - num_features % group_size) % group_size)
+
+    # Unpack bitstream
+    if isinstance(bits, int):
+        print(f"unpack via single precision {type(bits)=}, {type(scale)=}")
+
+        unpack_func = ext_quantization.unpack_single_precision
+    else:
+        print(f"unpack via mixed precision {bits.shape=}")
+        unpack_func = ext_quantization.unpack_mixed_precision
+    data = unpack_func(data, bits, scale, mn, N, num_features // group_size, group_size)
+
+    return data
 
 
 def test_quant_correctness():
@@ -96,11 +122,22 @@ def test_quant_correctness():
 
     #print(f'{activation=}')
 
-    q_inputs, q_scale, q_min, q_max = quantize_activation(activation)
-    print(f'{q_inputs=}, {q_scale=}')
-    print(f'{q_min=}, {q_max=}')
+    q_inputs, q_bits, q_scale, q_min = quantize_activation(activation)
+    #print(f'{q_inputs=}, {q_scale=}')
+    #print(f'{q_min=},')
 
+    # dequantize
+    print(f"{q_inputs.dtype=}")
 
+    print(f"{type(q_bits)=}, {q_min=}")
+    print(f"{q_scale.dtype=}, {q_scale.shape=}")
+
+    dequantized_inputs = dequantize_and_unpack(q_inputs, activation.shape, q_bits, q_scale, q_min)
+
+    print(f'{dequantized_inputs[0:10]=}')
+
+    res = quant_allclose(activation, dequantized_inputs)
+    print(f'{res=}')
 
 
 
